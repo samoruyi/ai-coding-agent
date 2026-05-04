@@ -1,0 +1,103 @@
+# Default values for slack-gateway. Override with `--set` or `-f`.
+
+replicaCount: 2
+
+image:
+  repository: slack-gateway
+  tag: ""           # defaults to .Chart.AppVersion if empty
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+# Public ingress (Slack must reach POST /slack/events). For EKS we recommend
+# the AWS Load Balancer Controller; defaults below assume it's installed.
+ingress:
+  enabled: false
+  className: alb
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    # Set this to your ACM cert ARN to enable HTTPS:
+    # alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:...
+  hosts:
+    - host: slack-gateway.example.com
+      paths:
+        - path: /slack/events
+          pathType: Prefix
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  runAsGroup: 1001
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# IAM Role for Service Account (IRSA). Set this to the role ARN created by
+# Terraform that grants access to AWS Secrets Manager.
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+    # eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/coding-agent-gateway
+
+# Configuration via env. All non-secret values go here; secrets come from
+# the Secret resource below.
+config:
+  logLevel: INFO
+  temporalAddress: temporal-frontend.coding-agent.svc.cluster.local:7233
+  temporalNamespace: default
+  temporalTaskQueue: coding-agent
+  temporalTLS: false
+  githubDefaultOwner: ""
+  githubDefaultRepo: ""
+
+# Secrets injected as env vars. In a real deployment these are typically
+# synced from AWS Secrets Manager via the External Secrets Operator;
+# Terraform provisions the SM secret, ESO syncs to a Kubernetes Secret,
+# and the chart references it by name.
+secrets:
+  # If externalSecretName is set, the deployment uses an existing Secret
+  # (managed out-of-band, e.g. by ExternalSecrets). Otherwise we create
+  # one from `secrets.values` (NOT recommended for production).
+  externalSecretName: ""
+  values:
+    SLACK_BOT_TOKEN: ""
+    SLACK_SIGNING_SECRET: ""
+
+podAnnotations: {}
+podLabels: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Pod Disruption Budget to keep at least one replica during voluntary disruptions.
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1

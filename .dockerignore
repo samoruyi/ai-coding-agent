@@ -1,0 +1,43 @@
+# Keep image build contexts small. The Dockerfiles only need the
+# uv workspace files - everything else just bloats the layer cache.
+
+.git
+.github
+.gitignore
+
+# Local venvs / caches
+.venv
+.venv-*
+.uv
+.ruff_cache
+.mypy_cache
+.pytest_cache
+.coverage
+htmlcov
+
+# Editor / OS
+.vscode
+.idea
+.DS_Store
+*.swp
+*.swo
+
+# Build artifacts
+dist
+build
+**/__pycache__
+*.pyc
+*.pyo
+
+# Things irrelevant to runtime images
+docs
+helm
+terraform
+scripts
+docker-compose.yml
+Makefile
+*.md
+*.pdf
+.env
+.env.*
+!.env.example

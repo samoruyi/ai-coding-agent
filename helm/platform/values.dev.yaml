@@ -1,0 +1,27 @@
+# Local / dev environment overrides for the umbrella chart.
+# Use against minikube / kind / k3d. Self-hosts a single-node Temporal.
+#
+#   helm dependency update helm/platform
+#   helm install agent helm/platform -n coding-agent --create-namespace \
+#     -f helm/platform/values.dev.yaml \
+#     --set temporal-worker.secrets.values.OPENAI_API_KEY=$OPENAI_API_KEY
+
+slack-gateway:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+  ingress:
+    enabled: false      # use kubectl port-forward in dev
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits:   { cpu: 250m, memory: 256Mi }
+
+temporal-worker:
+  replicaCount: 1
+  autoscaling:
+    enabled: false
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits:   { cpu: 750m, memory: 1Gi }
+  config:
+    githubMode: mock

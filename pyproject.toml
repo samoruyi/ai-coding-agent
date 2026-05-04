@@ -1,0 +1,54 @@
+# Root of the uv workspace.
+#
+# This file is *not* a publishable package - it exists so `uv sync` can
+# resolve and install all sub-packages (apps + the shared library) into
+# a single editable .venv at the repo root. Each sub-package keeps its
+# own pyproject.toml with its own dependencies.
+#
+# See https://docs.astral.sh/uv/concepts/projects/workspaces/
+
+[project]
+name = "coding-agent-platform"
+version = "0.1.0"
+description = "Slack-driven coding agent platform: Pydantic AI + Temporal + EKS."
+requires-python = ">=3.11"
+# We don't ship the meta-package; depend on the workspace members so a
+# single ``uv sync`` installs everything in editable mode.
+dependencies = [
+  "coding-agent-shared",
+  "slack-gateway",
+  "temporal-worker",
+]
+
+[tool.uv.workspace]
+members = [
+  "packages/shared",
+  "apps/slack_gateway",
+  "apps/temporal_worker",
+]
+
+[tool.uv.sources]
+coding-agent-shared = { workspace = true }
+slack-gateway = { workspace = true }
+temporal-worker = { workspace = true }
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = [".venv", ".venv-*", "build", "dist"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "S"]
+ignore = [
+  "S101",  # asserts are fine in tests
+  "S603",  # subprocess: we control argv (no shell=True), allowlisted
+  "S607",  # subprocess via PATH: intentional, see SUBPROCESS_PATH constant
+  "B008",  # FastAPI uses Depends() default
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S105", "S106"]   # hardcoded passwords are OK in test fixtures
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["apps", "packages"]

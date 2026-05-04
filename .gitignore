@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+.env
+.env.local
+.env.*.local
+
+# uv / pip
+.uv/
+# uv.lock IS committed - it pins the dependency graph for reproducibility
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Tooling
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+.terraform/
+.terraform.lock.hcl
+crash.log
+
+# Kubernetes
+kubeconfig
+*.kubeconfig
+helm/platform/charts/
+helm/platform/Chart.lock
+
+# Local dev workspaces (agent scratch dirs)
+.workspaces/
+.tmp/
+
+# Logs
+*.log
+logs/
+
+# Build artifacts
+*.zip
+*.tar.gz

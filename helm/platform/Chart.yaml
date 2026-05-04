@@ -1,0 +1,32 @@
+apiVersion: v2
+name: coding-agent-platform
+description: |
+  Umbrella chart for the Coding Agent Platform.
+
+  Bundles the two services we own:
+    * temporal-worker
+    * slack-gateway
+
+  Temporal itself is intentionally NOT a sub-chart dependency; it has a
+  rich install (Cassandra/Postgres/Elasticsearch) that's better managed
+  out-of-band. Recommended options:
+
+    a) Temporal Cloud (production)
+         - Set TEMPORAL_ADDRESS to the cloud endpoint
+         - Set TEMPORAL_TLS=true and provide cert/key via Secret
+    b) Self-host with the official chart (separate release)
+         helm repo add temporalio https://go.temporal.io/helm-charts
+         helm install temporal temporalio/temporal -n temporal
+    c) docker-compose (local dev only)
+         see ./docker-compose.yml
+
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+dependencies:
+  - name: slack-gateway
+    version: 0.1.0
+    repository: "file://../slack-gateway"
+  - name: temporal-worker
+    version: 0.1.0
+    repository: "file://../temporal-worker"

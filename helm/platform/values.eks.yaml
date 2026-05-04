@@ -1,0 +1,60 @@
+# EKS environment overrides for the umbrella chart.
+# Pair with terraform/envs/dev outputs.
+#
+#   helm dependency update helm/platform
+#   helm upgrade --install agent helm/platform -n coding-agent --create-namespace \
+#     -f helm/platform/values.eks.yaml \
+#     --set slack-gateway.image.repository=$ECR_GATEWAY \
+#     --set temporal-worker.image.repository=$ECR_WORKER
+#
+# This chart does NOT install Temporal. Either:
+#   * point at Temporal Cloud (set temporalAddress + temporalTLS below), or
+#   * pre-install the official temporal chart in another namespace and use
+#     its in-cluster service DNS (the default below).
+
+slack-gateway:
+  replicaCount: 2
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+  config:
+    temporalAddress: "temporal-frontend.temporal.svc.cluster.local:7233"
+  ingress:
+    enabled: true
+    className: alb
+    annotations:
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      alb.ingress.kubernetes.io/target-type: ip
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+      # alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:...
+    hosts:
+      - host: REPLACE_ME.example.com
+        paths:
+          - path: /slack/events
+            pathType: Prefix
+  serviceAccount:
+    create: true
+    annotations:
+      # Set this to the IAM role ARN that the Terraform module creates.
+      # eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/coding-agent-gateway
+  secrets:
+    # Recommended: switch to ExternalSecrets and reference the synced
+    # Secret here:
+    # externalSecretName: slack-gateway-secrets
+
+temporal-worker:
+  replicaCount: 2
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+  config:
+    temporalAddress: "temporal-frontend.temporal.svc.cluster.local:7233"
+    githubMode: real        # flip to real once GITHUB_TOKEN is wired up
+  serviceAccount:
+    create: true
+    annotations:
+      # eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/coding-agent-worker
+  secrets:
+    # externalSecretName: temporal-worker-secrets

@@ -1,0 +1,12 @@
+apiVersion: v2
+name: temporal-worker
+description: Pydantic AI coding agent worker that polls a Temporal task queue.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - coding-agent
+  - temporal
+  - pydantic-ai
+maintainers:
+  - name: Coding Agent Platform

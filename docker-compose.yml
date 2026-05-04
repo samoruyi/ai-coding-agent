@@ -1,0 +1,100 @@
+# Local development stack.
+#
+# Brings up:
+#   * postgres (Temporal persistence)
+#   * temporal (server)
+#   * temporal-ui (web UI on :8233)
+#   * temporal-worker (our agent worker)
+#   * slack-gateway (FastAPI on :8080)
+#
+# Usage:
+#   cp .env.example .env
+#   # set OPENAI_API_KEY (or ANTHROPIC_API_KEY) and Slack tokens if you want
+#   # the full Slack flow; otherwise leave SLACK_* empty and trigger workflows
+#   # via the Temporal UI / CLI for local testing.
+#   docker compose up --build
+
+name: coding-agent
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: temporal
+      POSTGRES_DB: temporal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U temporal"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  temporal:
+    image: temporalio/auto-setup:1.24.2
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: temporal
+      POSTGRES_PWD: temporal
+      POSTGRES_SEEDS: postgres
+      DYNAMIC_CONFIG_FILE_PATH: /etc/temporal/config/dynamicconfig/dev.yaml
+    ports:
+      - "7233:7233"
+    healthcheck:
+      test: ["CMD", "tctl", "--address", "temporal:7233", "cluster", "health"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  temporal-ui:
+    image: temporalio/ui:2.27.2
+    depends_on:
+      - temporal
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: http://localhost:8233
+    ports:
+      - "8233:8080"
+
+  temporal-worker:
+    build:
+      context: .
+      dockerfile: apps/temporal_worker/Dockerfile
+    depends_on:
+      temporal:
+        condition: service_started
+    env_file:
+      - .env
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_NAMESPACE: default
+      TEMPORAL_TASK_QUEUE: coding-agent
+      AGENT_WORKSPACE_ROOT: /var/agent/workspaces
+    volumes:
+      - workspaces:/var/agent/workspaces
+
+  slack-gateway:
+    build:
+      context: .
+      dockerfile: apps/slack_gateway/Dockerfile
+    depends_on:
+      temporal:
+        condition: service_started
+    env_file:
+      - .env
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_NAMESPACE: default
+      TEMPORAL_TASK_QUEUE: coding-agent
+      SLACK_GATEWAY_PORT: 8080
+    ports:
+      - "8080:8080"
+
+volumes:
+  pgdata:
+  workspaces:

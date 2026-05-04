@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "temporal-worker.fullname" . }}
+  labels:
+    {{- include "temporal-worker.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "temporal-worker.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "temporal-worker.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "temporal-worker.serviceAccountName" . }}
+      # Workers are stateful from the user's POV (in-flight workflows). We
+      # give them ample shutdown time so Temporal can drain activity tasks.
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: worker
+          image: {{ include "temporal-worker.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          env:
+            - name: LOG_LEVEL
+              value: {{ .Values.config.logLevel | quote }}
+            - name: AGENT_MODEL
+              value: {{ .Values.config.agentModel | quote }}
+            - name: TEMPORAL_ADDRESS
+              value: {{ .Values.config.temporalAddress | quote }}
+            - name: TEMPORAL_NAMESPACE
+              value: {{ .Values.config.temporalNamespace | quote }}
+            - name: TEMPORAL_TASK_QUEUE
+              value: {{ .Values.config.temporalTaskQueue | quote }}
+            - name: TEMPORAL_TLS
+              value: {{ .Values.config.temporalTLS | quote }}
+            - name: GITHUB_MODE
+              value: {{ .Values.config.githubMode | quote }}
+            - name: GITHUB_API_BASE
+              value: {{ .Values.config.githubApiBase | quote }}
+            - name: GITHUB_DEFAULT_OWNER
+              value: {{ .Values.config.githubDefaultOwner | quote }}
+            - name: GITHUB_DEFAULT_REPO
+              value: {{ .Values.config.githubDefaultRepo | quote }}
+            - name: AGENT_MAX_ITERATIONS
+              value: {{ .Values.config.agentMaxIterations | quote }}
+            - name: AGENT_TIMEOUT_SECONDS
+              value: {{ .Values.config.agentTimeoutSeconds | quote }}
+            - name: AGENT_SHELL_ALLOWLIST
+              value: {{ .Values.config.agentShellAllowlist | quote }}
+            - name: AGENT_WORKSPACE_ROOT
+              value: {{ .Values.workspaceVolume.mountPath | quote }}
+          envFrom:
+            - secretRef:
+                name: {{ include "temporal-worker.secretName" . }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: workspaces
+              mountPath: {{ .Values.workspaceVolume.mountPath }}
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: workspaces
+          {{- if eq .Values.workspaceVolume.type "pvc" }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.workspaceVolume.pvc.claimName | required "workspaceVolume.pvc.claimName is required when type=pvc" }}
+          {{- else }}
+          emptyDir:
+            sizeLimit: {{ .Values.workspaceVolume.emptyDir.sizeLimit }}
+          {{- end }}
+        - name: tmp
+          emptyDir: {}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

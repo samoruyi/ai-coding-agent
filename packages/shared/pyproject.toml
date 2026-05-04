@@ -1,0 +1,15 @@
+[project]
+name = "coding-agent-shared"
+version = "0.1.0"
+description = "Shared Pydantic types for the coding agent platform."
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic>=2.7,<3",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/coding_agent_shared"]

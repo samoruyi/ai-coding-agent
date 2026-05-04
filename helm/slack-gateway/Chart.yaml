@@ -1,0 +1,12 @@
+apiVersion: v2
+name: slack-gateway
+description: Slack-facing HTTP gateway that starts/signals coding agent workflows.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - coding-agent
+  - slack
+  - temporal
+maintainers:
+  - name: Coding Agent Platform

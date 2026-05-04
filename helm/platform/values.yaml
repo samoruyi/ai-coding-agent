@@ -1,0 +1,29 @@
+# Umbrella values. Sub-chart values are nested under their chart name.
+# Override per environment with `helm install -f values.<env>.yaml`.
+#
+# IMPORTANT: this chart does NOT install Temporal. Both services need a
+# reachable Temporal frontend - see Chart.yaml description for options.
+
+# ---- slack-gateway sub-chart ----
+slack-gateway:
+  image:
+    repository: slack-gateway
+    tag: "0.1.0"
+  config:
+    # Override per env. Examples:
+    #   in-cluster temporal:  temporal-frontend.temporal.svc.cluster.local:7233
+    #   Temporal Cloud:       my-ns.abc123.tmprl.cloud:7233
+    temporalAddress: "temporal-frontend.temporal.svc.cluster.local:7233"
+    temporalNamespace: default
+  ingress:
+    enabled: true
+
+# ---- temporal-worker sub-chart ----
+temporal-worker:
+  image:
+    repository: temporal-worker
+    tag: "0.1.0"
+  config:
+    temporalAddress: "temporal-frontend.temporal.svc.cluster.local:7233"
+    temporalNamespace: default
+    githubMode: mock

@@ -1,0 +1,98 @@
+# Default values for temporal-worker.
+
+replicaCount: 2
+
+image:
+  repository: temporal-worker
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 512Mi
+  limits:
+    cpu: 1500m
+    memory: 1.5Gi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  runAsGroup: 1001
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+config:
+  logLevel: INFO
+
+  # ---- LLM ----
+  agentModel: "anthropic:claude-opus-4-7"
+
+  # ---- Temporal ----
+  temporalAddress: temporal-frontend.coding-agent.svc.cluster.local:7233
+  temporalNamespace: default
+  temporalTaskQueue: coding-agent
+  temporalTLS: false
+
+  # ---- GitHub ----
+  githubMode: mock          # "mock" or "real"
+  githubApiBase: https://api.github.com
+  githubDefaultOwner: ""
+  githubDefaultRepo: ""
+
+  # ---- Safety rails ----
+  agentMaxIterations: 20
+  agentTimeoutSeconds: 900
+  agentShellAllowlist: "ls,cat,head,tail,wc,grep,rg,find,git,python,python3,pytest,node,npm,pnpm"
+
+# Where the per-workflow scratch directories live. We use an emptyDir by
+# default - simple, fast, and cleaned on pod restart. For workspaces that
+# need to survive activity retries on a different pod, point this at an
+# EFS PVC; see DESIGN.md.
+workspaceVolume:
+  type: emptyDir          # emptyDir | pvc
+  emptyDir:
+    sizeLimit: 5Gi
+  pvc:
+    claimName: ""
+  mountPath: /var/agent/workspaces
+
+# Secrets injected as env vars. See chart README for the External Secrets
+# Operator pattern recommended in production.
+secrets:
+  externalSecretName: ""
+  values:
+    OPENAI_API_KEY: ""
+    ANTHROPIC_API_KEY: ""
+    SLACK_BOT_TOKEN: ""
+    GITHUB_TOKEN: ""
+
+podAnnotations: {}
+podLabels: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
