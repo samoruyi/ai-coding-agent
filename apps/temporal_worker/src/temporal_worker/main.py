@@ -9,7 +9,7 @@ import signal
 import sys
 
 from temporalio.client import Client, TLSConfig
-from temporalio.worker import Worker
+from temporalio.worker import UnsandboxedWorkflowRunner, Worker
 
 from .activities import (
     cleanup_workspace,
@@ -80,6 +80,9 @@ async def _run() -> None:
         client,
         task_queue=settings.temporal_task_queue,
         workflows=[CodingAgentWorkflow],
+        # Beartype imports used by the agent stack can recurse in Temporal's
+        # Python sandbox importer. Unsandboxed runner avoids startup failure.
+        workflow_runner=UnsandboxedWorkflowRunner(),
         activities=[
             setup_workspace,
             clone_repo,

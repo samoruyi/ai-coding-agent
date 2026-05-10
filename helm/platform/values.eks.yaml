@@ -26,16 +26,16 @@ slack-gateway:
     annotations:
       alb.ingress.kubernetes.io/scheme: internet-facing
       alb.ingress.kubernetes.io/target-type: ip
-      alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":80}]'
       # alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:...
     hosts:
-      - host: REPLACE_ME.example.com
+      - host: agent.demieinfo.xyz
         paths:
           - path: /slack/events
             pathType: Prefix
   serviceAccount:
     create: true
-    annotations:
+    annotations: {}
       # Set this to the IAM role ARN that the Terraform module creates.
       # eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/coding-agent-gateway
   secrets:
@@ -51,10 +51,10 @@ temporal-worker:
     maxReplicas: 10
   config:
     temporalAddress: "temporal-frontend.temporal.svc.cluster.local:7233"
-    githubMode: real        # flip to real once GITHUB_TOKEN is wired up
+    githubMode: mock        # flip to real once GITHUB_TOKEN is wired up
   serviceAccount:
     create: true
-    annotations:
+    annotations: {}
       # eks.amazonaws.com/role-arn: arn:aws:iam::ACCOUNT_ID:role/coding-agent-worker
   secrets:
     # externalSecretName: temporal-worker-secrets
